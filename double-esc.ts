@@ -94,10 +94,12 @@ class DoubleEscapeEditor extends CustomEditor {
 
     if (this.escState.hintActive) {
       const label = " esc again to abort ";
-      const first = 0;
-      const offset = 2;
-      if (visibleWidth(lines[first]!) >= label.length + offset) {
-        lines[first] = truncateToWidth(lines[first]!, width - label.length - offset, "") + " ".repeat(offset) + label;
+      const last = lines.length - 1;
+      const line = lines[last]!;
+      const lineW = visibleWidth(line);
+      if (lineW >= label.length) {
+        const before = Math.floor((lineW - label.length) / 2);
+        lines[last] = truncateToWidth(line, before, "") + label + truncateToWidth(line, lineW - before - label.length, "");
       }
     }
 
