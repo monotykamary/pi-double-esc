@@ -1,0 +1,53 @@
+{
+  "name": "pi-double-esc",
+  "version": "1.0.0",
+  "description": "Prevent accidental Escape from aborting the LLM — requires double-press to interrupt while streaming",
+  "type": "module",
+  "author": "Tom X Nguyen",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/monotykamary/pi-double-esc.git"
+  },
+  "homepage": "https://github.com/monotykamary/pi-double-esc#readme",
+  "bugs": {
+    "url": "https://github.com/monotykamary/pi-double-esc/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "extension",
+    "escape",
+    "debounce",
+    "double-escape",
+    "interrupt",
+    "abort"
+  ],
+  "files": [
+    "*.ts",
+    "src/",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint:dead": "knip --no-gitignore"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^4.1.4",
+    "knip": "^6.4.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
+  },
+  "pi": {
+    "extensions": [
+      "./double-esc.ts"
+    ]
+  }
+}
