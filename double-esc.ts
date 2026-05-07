@@ -17,8 +17,8 @@
  * the PI_DOUBLE_ESC_MS environment variable.
  */
 
-import { CustomEditor, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { matchesKey, truncateToWidth, visibleWidth, type TUI } from "@mariozechner/pi-tui";
+import { CustomEditor, type ExtensionAPI, Theme } from "@mariozechner/pi-coding-agent";
+import { matchesKey, truncateToWidth, visibleWidth, type TUI, type EditorTheme } from "@mariozechner/pi-tui";
 import {
   createInitialState,
   getDefaultDebounceMs,
@@ -32,15 +32,18 @@ class DoubleEscapeEditor extends CustomEditor {
   private escState: DoubleEscapeState = createInitialState();
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private isIdle: () => boolean;
+  private appTheme: Theme;
 
   constructor(
     tui: TUI,
-    theme: any,
+    editorTheme: EditorTheme,
     keybindings: any,
+    theme: Theme,
     isIdle: () => boolean,
     options?: any,
   ) {
-    super(tui, theme, keybindings, options);
+    super(tui, editorTheme, keybindings, options);
+    this.appTheme = theme;
     this.isIdle = isIdle;
   }
 
@@ -94,12 +97,13 @@ class DoubleEscapeEditor extends CustomEditor {
 
     if (this.escState.hintActive) {
       const label = " esc again to abort ";
+      const styledLabel = this.appTheme.fg("dim", label);
       const last = lines.length - 1;
       const line = lines[last]!;
       const lineW = visibleWidth(line);
       const gap = 2;
       if (lineW >= label.length + gap) {
-        lines[last] = truncateToWidth(line, lineW - label.length - gap, "") + label + truncateToWidth(line, gap, "");
+        lines[last] = truncateToWidth(line, lineW - label.length - gap, "") + styledLabel + truncateToWidth(line, gap, "");
       }
     }
 
@@ -109,8 +113,8 @@ class DoubleEscapeEditor extends CustomEditor {
 
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
-    ctx.ui.setEditorComponent((tui, theme, kb) =>
-      new DoubleEscapeEditor(tui, theme, kb, () => ctx.isIdle()),
+    ctx.ui.setEditorComponent((tui, editorTheme, kb) =>
+      new DoubleEscapeEditor(tui, editorTheme, kb, ctx.ui.theme, () => ctx.isIdle()),
     );
   });
 }
