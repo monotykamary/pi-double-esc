@@ -6,7 +6,7 @@ A [pi](https://github.com/badlogic/pi-mono) extension that prevents accidental E
 
 When the LLM is streaming a response:
 
-- **First Escape press**: Shows a `ESC AGAIN TO ABORT` hint in the editor border — does **not** abort
+- **First Escape press**: Shows an `esc again to abort` hint on the editor border — does **not** abort
 - **Second Escape** within the debounce window: Actually aborts the streaming response
 - If the debounce window expires, the hint clears and escape resets
 
@@ -14,20 +14,45 @@ When the LLM is **not** streaming, Escape works normally (immediate) — no debo
 
 ## Installation
 
-```bash
-pi install pi-double-esc
-```
+### Option 1: Install via pi package (Recommended)
 
-Or run directly:
+Install directly from GitHub as a pi package:
 
 ```bash
-pi --extension ./double-esc.ts
+pi install git:github.com:monotykamary/pi-double-esc@main
 ```
 
-Or add to your `~/.pi/agent/extensions.json`:
+Or add to your `settings.json`:
 
 ```json
-["/path/to/pi-double-esc/double-esc.ts"]
+{
+  "packages": [
+    "git:github.com:monotykamary/pi-double-esc@main"
+  ]
+}
+```
+
+### Option 2: Global Installation
+
+Copy the extension to pi's global extensions directory:
+
+```bash
+cp double-esc.ts ~/.pi/agent/extensions/
+```
+
+### Option 3: Project-Local Installation
+
+Copy to your project's `.pi/extensions/` directory:
+
+```bash
+mkdir -p .pi/extensions
+cp double-esc.ts .pi/extensions/
+```
+
+### Option 4: Quick Test
+
+```bash
+pi -e ./double-esc.ts
 ```
 
 ## Configuration
@@ -35,7 +60,7 @@ Or add to your `~/.pi/agent/extensions.json`:
 Set the `PI_DOUBLE_ESC_MS` environment variable to change the debounce timeout (default: 1500ms):
 
 ```bash
-PI_DOUBLE_ESC_MS=2000 pi --extension ./double-esc.ts
+PI_DOUBLE_ESC_MS=2000 pi
 ```
 
 ## How it works
