@@ -97,9 +97,9 @@ class DoubleEscapeEditor extends CustomEditor {
       const last = lines.length - 1;
       const line = lines[last]!;
       const lineW = visibleWidth(line);
-      if (lineW >= label.length) {
-        const before = Math.floor((lineW - label.length) / 2);
-        lines[last] = truncateToWidth(line, before, "") + label + truncateToWidth(line, lineW - before - label.length, "");
+      const gap = 2;
+      if (lineW >= label.length + gap) {
+        lines[last] = truncateToWidth(line, lineW - label.length - gap, "") + label + truncateToWidth(line, gap, "");
       }
     }
 
