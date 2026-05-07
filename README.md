@@ -2,6 +2,8 @@
 
 A [pi](https://github.com/badlogic/pi-mono) extension that prevents accidental Escape key presses from aborting the LLM mid-conversation.
 
+<img alt="double-esc hint" src="./media/esc.jpg" />
+
 ## What it does
 
 When the LLM is streaming a response:
