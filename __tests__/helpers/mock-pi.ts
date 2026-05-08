@@ -4,7 +4,7 @@
  * Provides a mock ExtensionAPI and factories for building test contexts.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const noop = () => {};
 

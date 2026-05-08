@@ -17,8 +17,8 @@
  * the PI_DOUBLE_ESC_MS environment variable.
  */
 
-import { CustomEditor, type ExtensionAPI, Theme } from "@mariozechner/pi-coding-agent";
-import { matchesKey, truncateToWidth, visibleWidth, type TUI, type EditorTheme } from "@mariozechner/pi-tui";
+import { CustomEditor, type ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
+import { matchesKey, truncateToWidth, visibleWidth, type TUI, type EditorTheme } from "@earendil-works/pi-tui";
 import {
   createInitialState,
   getDefaultDebounceMs,
