@@ -1,10 +1,16 @@
-# pi-double-esc
+<div align="center">
 
-A [pi](https://github.com/badlogic/pi-mono) extension that prevents accidental Escape key presses from aborting the LLM mid-conversation.
+# ⏏️ pi-double-esc
 
-<img alt="double-esc hint" src="./media/esc.jpg" />
+A [pi](https://github.com/badlogic/pi-mono) extension that prevents accidental **Escape** key presses from aborting the LLM mid-conversation.
 
-## What it does
+<img alt="double-esc hint" src="./media/esc.jpg" width="800">
+
+</div>
+
+---
+
+## What It Does
 
 When the LLM is streaming a response:
 
@@ -65,7 +71,7 @@ Set the `PI_DOUBLE_ESC_MS` environment variable to change the debounce timeout (
 PI_DOUBLE_ESC_MS=2000 pi
 ```
 
-## How it works
+## How It Works
 
 The extension replaces pi's editor component with a `CustomEditor` subclass that intercepts Escape key presses:
 
