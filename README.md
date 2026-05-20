@@ -27,7 +27,7 @@ When the LLM is **not** streaming, Escape works normally (immediate) — no debo
 Install directly from GitHub as a pi package:
 
 ```bash
-pi install git:github.com:monotykamary/pi-double-esc@main
+pi install https://github.com/monotykamary/pi-double-esc@main
 ```
 
 Or add to your `settings.json`:
@@ -35,7 +35,7 @@ Or add to your `settings.json`:
 ```json
 {
   "packages": [
-    "git:github.com:monotykamary/pi-double-esc@main"
+    "https://github.com/monotykamary/pi-double-esc@main"
   ]
 }
 ```
