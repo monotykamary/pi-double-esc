@@ -2,7 +2,12 @@
 
 # ⏏️ pi-double-esc
 
-A [pi](https://github.com/badlogic/pi-mono) extension that prevents accidental **Escape** key presses from aborting the LLM mid-conversation.
+**Prevent accidental Escape aborts in [pi](https://github.com/earendil-works/pi-coding-agent)**
+
+_Require a second Escape press within 500ms to confirm any abort action._
+
+[![pi extension](https://img.shields.io/badge/pi-extension-blueviolet)](https://github.com/earendil-works/pi-coding-agent)
+[![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 <img alt="double-esc hint" src="./media/esc.jpg" width="800">
 
