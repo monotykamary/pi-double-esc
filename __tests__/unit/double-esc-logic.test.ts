@@ -2,13 +2,14 @@
  * Unit tests for double-escape debounce logic.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import {
   handleEscape,
   handleOtherKey,
   handleTimeout,
   createInitialState,
   getDefaultDebounceMs,
+  getHintPosition,
   type DoubleEscapeState,
 } from "../../src/double-esc-logic.js";
 
@@ -118,32 +119,56 @@ describe("getDefaultDebounceMs", () => {
     const original = process.env.PI_DOUBLE_ESC_MS;
     process.env.PI_DOUBLE_ESC_MS = "2000";
     expect(getDefaultDebounceMs()).toBe(2000);
-    if (original !== undefined) process.env.PI_DOUBLE_ESC_MS = original;
-    else delete process.env.PI_DOUBLE_ESC_MS;
+    if (original === undefined) delete process.env.PI_DOUBLE_ESC_MS;
+    else process.env.PI_DOUBLE_ESC_MS = original;
   });
 
   it("ignores invalid PI_DOUBLE_ESC_MS values", () => {
     const original = process.env.PI_DOUBLE_ESC_MS;
     process.env.PI_DOUBLE_ESC_MS = "not-a-number";
     expect(getDefaultDebounceMs()).toBe(1500);
-    if (original !== undefined) process.env.PI_DOUBLE_ESC_MS = original;
-    else delete process.env.PI_DOUBLE_ESC_MS;
+    if (original === undefined) delete process.env.PI_DOUBLE_ESC_MS;
+    else process.env.PI_DOUBLE_ESC_MS = original;
   });
 
   it("ignores zero PI_DOUBLE_ESC_MS values", () => {
     const original = process.env.PI_DOUBLE_ESC_MS;
     process.env.PI_DOUBLE_ESC_MS = "0";
     expect(getDefaultDebounceMs()).toBe(1500);
-    if (original !== undefined) process.env.PI_DOUBLE_ESC_MS = original;
-    else delete process.env.PI_DOUBLE_ESC_MS;
+    if (original === undefined) delete process.env.PI_DOUBLE_ESC_MS;
+    else process.env.PI_DOUBLE_ESC_MS = original;
   });
 
   it("ignores negative PI_DOUBLE_ESC_MS values", () => {
     const original = process.env.PI_DOUBLE_ESC_MS;
     process.env.PI_DOUBLE_ESC_MS = "-500";
     expect(getDefaultDebounceMs()).toBe(1500);
-    if (original !== undefined) process.env.PI_DOUBLE_ESC_MS = original;
-    else delete process.env.PI_DOUBLE_ESC_MS;
+    if (original === undefined) delete process.env.PI_DOUBLE_ESC_MS;
+    else process.env.PI_DOUBLE_ESC_MS = original;
+  });
+});
+
+describe("getHintPosition", () => {
+  const original = process.env.PI_DOUBLE_ESC_HINT_POSITION;
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.PI_DOUBLE_ESC_HINT_POSITION;
+    else process.env.PI_DOUBLE_ESC_HINT_POSITION = original;
+  });
+
+  it("defaults to right", () => {
+    delete process.env.PI_DOUBLE_ESC_HINT_POSITION;
+    expect(getHintPosition()).toBe("right");
+  });
+
+  it.each(["left", "center", "right"] as const)("accepts %s", (position) => {
+    process.env.PI_DOUBLE_ESC_HINT_POSITION = position;
+    expect(getHintPosition()).toBe(position);
+  });
+
+  it("falls back to right for an invalid value", () => {
+    process.env.PI_DOUBLE_ESC_HINT_POSITION = "bottom";
+    expect(getHintPosition()).toBe("right");
   });
 });
 

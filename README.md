@@ -76,6 +76,12 @@ Set the `PI_DOUBLE_ESC_MS` environment variable to change the debounce timeout (
 PI_DOUBLE_ESC_MS=2000 pi
 ```
 
+Set `PI_DOUBLE_ESC_HINT_POSITION` to `left`, `center`, or `right` to control where the escape hint appears (default: `right`):
+
+```bash
+PI_DOUBLE_ESC_HINT_POSITION=center pi
+```
+
 ## How It Works
 
 The extension replaces pi's editor component with a `CustomEditor` subclass that intercepts Escape key presses:
