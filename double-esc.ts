@@ -14,19 +14,69 @@
  * Autocomplete dismissal always works on single Escape (handled by Editor parent).
  *
  * The debounce timeout defaults to 1500ms and can be configured via
- * the PI_DOUBLE_ESC_MS environment variable.
+ * the PI_DOUBLE_ESC_MS environment variable. The hint position defaults to
+ * right and can be configured via PI_DOUBLE_ESC_HINT_POSITION (left, center,
+ * or right).
  */
 
-import { CustomEditor, type ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
-import { matchesKey, truncateToWidth, visibleWidth, type TUI, type EditorTheme } from "@earendil-works/pi-tui";
+import {
+  CustomEditor,
+  type ExtensionAPI,
+  type Theme,
+} from "@earendil-works/pi-coding-agent";
+import {
+  matchesKey,
+  truncateToWidth,
+  visibleWidth,
+  type TUI,
+  type EditorTheme,
+} from "@earendil-works/pi-tui";
 import {
   createInitialState,
   getDefaultDebounceMs,
+  getHintPosition,
   handleEscape,
   handleOtherKey,
   handleTimeout,
   type DoubleEscapeState,
+  type HintPosition,
 } from "./src/index.js";
+
+const ESCAPE_HINT_LABEL = " esc again to abort ";
+const HINT_GAP = 2;
+
+export function renderEscapeHintLine(
+  line: string,
+  styledLabel: string,
+  position: HintPosition,
+): string {
+  const lineW = visibleWidth(line);
+  const labelW = visibleWidth(styledLabel);
+  if (lineW < labelW + HINT_GAP) return line;
+
+  switch (position) {
+    case "left":
+      return (
+        truncateToWidth(line, HINT_GAP, "") +
+        styledLabel +
+        truncateToWidth(line, lineW - labelW - HINT_GAP, "")
+      );
+    case "center": {
+      const leftW = Math.floor((lineW - labelW) / 2);
+      return (
+        truncateToWidth(line, leftW, "") +
+        styledLabel +
+        truncateToWidth(line, lineW - labelW - leftW, "")
+      );
+    }
+    case "right":
+      return (
+        truncateToWidth(line, lineW - labelW - HINT_GAP, "") +
+        styledLabel +
+        truncateToWidth(line, HINT_GAP, "")
+      );
+  }
+}
 
 class DoubleEscapeEditor extends CustomEditor {
   private escState: DoubleEscapeState = createInitialState();
@@ -96,15 +146,13 @@ class DoubleEscapeEditor extends CustomEditor {
     if (lines.length === 0) return lines;
 
     if (this.escState.hintActive) {
-      const label = " esc again to abort ";
-      const styledLabel = this.appTheme.fg("dim", label);
+      const styledLabel = this.appTheme.fg("dim", ESCAPE_HINT_LABEL);
       const last = lines.length - 1;
-      const line = lines[last]!;
-      const lineW = visibleWidth(line);
-      const gap = 2;
-      if (lineW >= label.length + gap) {
-        lines[last] = truncateToWidth(line, lineW - label.length - gap, "") + styledLabel + truncateToWidth(line, gap, "");
-      }
+      lines[last] = renderEscapeHintLine(
+        lines[last]!,
+        styledLabel,
+        getHintPosition(),
+      );
     }
 
     return lines;
@@ -113,8 +161,11 @@ class DoubleEscapeEditor extends CustomEditor {
 
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
-    ctx.ui.setEditorComponent((tui, editorTheme, kb) =>
-      new DoubleEscapeEditor(tui, editorTheme, kb, ctx.ui.theme, () => ctx.isIdle()),
+    ctx.ui.setEditorComponent(
+      (tui, editorTheme, kb) =>
+        new DoubleEscapeEditor(tui, editorTheme, kb, ctx.ui.theme, () =>
+          ctx.isIdle(),
+        ),
     );
   });
 }

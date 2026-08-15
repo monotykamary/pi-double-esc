@@ -22,6 +22,10 @@ export interface DoubleEscapeResult {
 
 const DEFAULT_DEBOUNCE_MS = 1500;
 
+export type HintPosition = "left" | "center" | "right";
+
+const DEFAULT_HINT_POSITION: HintPosition = "right";
+
 export function getDefaultDebounceMs(): number {
   const env = process.env.PI_DOUBLE_ESC_MS;
   if (env) {
@@ -29,6 +33,15 @@ export function getDefaultDebounceMs(): number {
     if (!isNaN(parsed) && parsed > 0) return parsed;
   }
   return DEFAULT_DEBOUNCE_MS;
+}
+
+export function getHintPosition(): HintPosition {
+  const position =
+    process.env.PI_DOUBLE_ESC_HINT_POSITION?.trim().toLowerCase();
+  if (position === "left" || position === "center" || position === "right") {
+    return position;
+  }
+  return DEFAULT_HINT_POSITION;
 }
 
 /**
@@ -68,7 +81,9 @@ export function handleEscape(
  * Handle any non-escape key press while hint is showing.
  * Dismisses the hint and resets the debounce state.
  */
-export function handleOtherKey(currentState: DoubleEscapeState): DoubleEscapeResult {
+export function handleOtherKey(
+  currentState: DoubleEscapeState,
+): DoubleEscapeResult {
   if (!currentState.hintActive) {
     return { state: currentState, action: "nothing" };
   }
@@ -83,7 +98,9 @@ export function handleOtherKey(currentState: DoubleEscapeState): DoubleEscapeRes
  * Handle debounce timeout expiry.
  * Clears the hint and resets state.
  */
-export function handleTimeout(currentState: DoubleEscapeState): DoubleEscapeResult {
+export function handleTimeout(
+  currentState: DoubleEscapeState,
+): DoubleEscapeResult {
   if (!currentState.hintActive) {
     return { state: currentState, action: "nothing" };
   }
