@@ -1,6 +1,6 @@
 {
   "name": "pi-double-esc",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Prevent accidental Escape from aborting the LLM — requires double-press to interrupt while streaming",
   "type": "module",
   "author": "Tom X Nguyen",
