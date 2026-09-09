@@ -11,14 +11,21 @@
  * When not streaming:
  *   - Escape works normally (immediate) — no debounce applied
  *
- * Autocomplete dismissal always works on single Escape (handled by Editor parent).
+ * Autocomplete dismissal always works on single Escape (handled by the current editor).
+ * The extension decorates an editor installed earlier instead of replacing it.
  *
  * The debounce timeout defaults to 1500ms and can be configured via
  * the PI_DOUBLE_ESC_MS environment variable.
  */
 
-import { CustomEditor, type ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
-import { matchesKey, truncateToWidth, visibleWidth, type TUI, type EditorTheme } from "@earendil-works/pi-tui";
+import { CustomEditor, type ExtensionAPI, type Theme } from "@earendil-works/pi-coding-agent";
+import {
+  matchesKey,
+  truncateToWidth,
+  visibleWidth,
+  type EditorComponent,
+  type TUI,
+} from "@earendil-works/pi-tui";
 import {
   createInitialState,
   getDefaultDebounceMs,
@@ -28,93 +35,81 @@ import {
   type DoubleEscapeState,
 } from "./src/index.js";
 
-class DoubleEscapeEditor extends CustomEditor {
-  private escState: DoubleEscapeState = createInitialState();
-  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private isIdle: () => boolean;
-  private appTheme: Theme;
+/** Add double-Escape behavior without replacing the current editor instance. */
+function decorateDoubleEscapeEditor(
+  editor: EditorComponent,
+  tui: TUI,
+  appTheme: Theme,
+  isIdle: () => boolean,
+): EditorComponent {
+  let escapeState: DoubleEscapeState = createInitialState();
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(
-    tui: TUI,
-    editorTheme: EditorTheme,
-    keybindings: any,
-    theme: Theme,
-    isIdle: () => boolean,
-    options?: any,
-  ) {
-    super(tui, editorTheme, keybindings, options);
-    this.appTheme = theme;
-    this.isIdle = isIdle;
-  }
+  const clearDebounce = (): void => {
+    clearTimeout(debounceTimer);
+    debounceTimer = undefined;
+  };
 
-  private clearDebounce(): void {
-    if (this.debounceTimer) {
-      clearTimeout(this.debounceTimer);
-      this.debounceTimer = null;
-    }
-  }
-
-  handleInput(data: string): void {
-    if (matchesKey(data, "escape")) {
-      const result = handleEscape(this.escState, this.isIdle());
-
-      this.escState = result.state;
-
-      if (result.action === "show_hint") {
-        this.clearDebounce();
-        this.debounceTimer = setTimeout(() => {
-          this.escState = handleTimeout(this.escState).state;
-          this.tui.requestRender();
-        }, getDefaultDebounceMs());
-        this.tui.requestRender();
-        return;
+  const handleInput = editor.handleInput.bind(editor);
+  editor.handleInput = (data: string): void => {
+    if (!matchesKey(data, "escape")) {
+      if (escapeState.hintActive) {
+        escapeState = handleOtherKey(escapeState).state;
+        clearDebounce();
+        tui.requestRender();
       }
-
-      if (result.action === "abort") {
-        this.clearDebounce();
-        super.handleInput(data);
-        return;
-      }
-
-      // "nothing" — idle state, pass through
-      super.handleInput(data);
+      handleInput(data);
       return;
     }
 
-    // Non-escape key while hint is showing: dismiss hint
-    if (this.escState.hintActive) {
-      this.escState = handleOtherKey(this.escState).state;
-      this.clearDebounce();
-      this.tui.requestRender();
+    const result = handleEscape(escapeState, isIdle());
+    escapeState = result.state;
+
+    if (result.action === "show_hint") {
+      clearDebounce();
+      debounceTimer = setTimeout(() => {
+        escapeState = handleTimeout(escapeState).state;
+        tui.requestRender();
+      }, getDefaultDebounceMs());
+      tui.requestRender();
+      return;
     }
 
-    super.handleInput(data);
-  }
+    clearDebounce();
+    handleInput(data);
+  };
 
-  render(width: number): string[] {
-    const lines = super.render(width);
-    if (lines.length === 0) return lines;
+  const render = editor.render.bind(editor);
+  editor.render = (width: number): string[] => {
+    const lines = render(width);
+    if (!escapeState.hintActive || lines.length === 0) return lines;
 
-    if (this.escState.hintActive) {
-      const label = " esc again to abort ";
-      const styledLabel = this.appTheme.fg("dim", label);
-      const last = lines.length - 1;
-      const line = lines[last]!;
-      const lineW = visibleWidth(line);
-      const gap = 2;
-      if (lineW >= label.length + gap) {
-        lines[last] = truncateToWidth(line, lineW - label.length - gap, "") + styledLabel + truncateToWidth(line, gap, "");
-      }
+    const label = " esc again to abort ";
+    const styledLabel = appTheme.fg("dim", label);
+    const last = lines.length - 1;
+    const line = lines[last]!;
+    const lineWidth = visibleWidth(line);
+    const gap = 2;
+    if (lineWidth >= label.length + gap) {
+      lines[last] =
+        truncateToWidth(line, lineWidth - label.length - gap, "") +
+        styledLabel +
+        truncateToWidth(line, gap, "");
     }
-
     return lines;
-  }
+  };
+
+  return editor;
 }
 
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
-    ctx.ui.setEditorComponent((tui, editorTheme, kb) =>
-      new DoubleEscapeEditor(tui, editorTheme, kb, ctx.ui.theme, () => ctx.isIdle()),
-    );
+    const previousEditorFactory = ctx.ui.getEditorComponent();
+    ctx.ui.setEditorComponent((tui, editorTheme, keybindings) => {
+      const editor =
+        previousEditorFactory?.(tui, editorTheme, keybindings) ??
+        new CustomEditor(tui, editorTheme, keybindings);
+      return decorateDoubleEscapeEditor(editor, tui, ctx.ui.theme, () => ctx.isIdle());
+    });
   });
 }
