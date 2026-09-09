@@ -78,15 +78,16 @@ PI_DOUBLE_ESC_MS=2000 pi
 
 ## How It Works
 
-The extension replaces pi's editor component with a `CustomEditor` subclass that intercepts Escape key presses:
+The extension decorates pi's current editor instead of replacing it:
 
-1. On each `session_start`, `ctx.ui.setEditorComponent()` installs the custom editor
-2. The editor uses `ctx.isIdle()` (which reflects `!session.isStreaming`) to detect streaming state
-3. While streaming, the first Escape shows a visual hint and starts a debounce timer
-4. A second Escape within the window calls `super.handleInput(data)` to perform the actual abort
-5. Any other keypress or timeout expiry dismisses the hint
+1. On each `session_start`, it reads the current editor factory with `ctx.ui.getEditorComponent()`.
+2. It creates that editor, or a `CustomEditor` when no extension installed one earlier.
+3. It decorates the editor's input and render methods with double-Escape behavior.
+4. While streaming, the first Escape shows a visual hint and starts a debounce timer.
+5. A second Escape within the window passes Escape to the current editor, which aborts the response.
+6. Any other keypress or timeout expiry dismisses the hint.
 
-The debounce logic lives in `src/double-esc-logic.ts` as pure functions for testability.
+This design preserves behavior from editor extensions loaded before `pi-double-esc`. The debounce logic lives in `src/double-esc-logic.ts` as pure functions for testability.
 
 ## Development
 
