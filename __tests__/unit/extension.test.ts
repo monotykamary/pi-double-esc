@@ -89,4 +89,31 @@ describe("extension registration", () => {
     expect(handleInput).toHaveBeenCalledOnce();
     expect(handleInput).toHaveBeenCalledWith("\x1b");
   });
+
+  it("does not stack decorators when session_start fires again", async () => {
+    const factory = await loadExtension();
+    const pi = createMockPi();
+    let installedEditorFactory: ((...args: any[]) => unknown) | undefined;
+    const setEditorComponent = vi.fn((editorFactory) => {
+      installedEditorFactory = editorFactory;
+    });
+    const ctx = makeCtx({
+      ui: {
+        getEditorComponent: vi.fn(() => installedEditorFactory),
+        setEditorComponent,
+        theme: { fg: (_key: string, value: string) => value },
+      },
+    });
+
+    factory(pi as any);
+    const handler = getHandler(pi, "session_start")!;
+
+    await handler({}, ctx);
+    const firstInstalled = installedEditorFactory;
+    expect(firstInstalled).toBeDefined();
+
+    await handler({}, ctx);
+    expect(setEditorComponent).toHaveBeenCalledOnce();
+    expect(installedEditorFactory).toBe(firstInstalled);
+  });
 });

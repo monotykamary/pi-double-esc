@@ -18,7 +18,12 @@
  * the PI_DOUBLE_ESC_MS environment variable.
  */
 
-import { CustomEditor, type ExtensionAPI, type Theme } from "@earendil-works/pi-coding-agent";
+import {
+  CustomEditor,
+  type ExtensionAPI,
+  type ExtensionContext,
+  type Theme,
+} from "@earendil-works/pi-coding-agent";
 import {
   matchesKey,
   truncateToWidth,
@@ -102,14 +107,28 @@ function decorateDoubleEscapeEditor(
   return editor;
 }
 
+// Marks the factory this extension installs. Repeated session_start events
+// (reload, new session, resume) must reuse it instead of stacking a second
+// decorator: the outer copy would swallow the first Escape and the inner one
+// would then show the hint again instead of aborting.
+const DECORATED_FACTORY = Symbol("pi-double-esc.decoratedFactory");
+
+type EditorFactory = NonNullable<ReturnType<ExtensionContext["ui"]["getEditorComponent"]>>;
+type DecoratedEditorFactory = EditorFactory & { [DECORATED_FACTORY]?: true };
+
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
-    const previousEditorFactory = ctx.ui.getEditorComponent();
-    ctx.ui.setEditorComponent((tui, editorTheme, keybindings) => {
+    const previousEditorFactory = ctx.ui.getEditorComponent() as DecoratedEditorFactory | undefined;
+    if (previousEditorFactory?.[DECORATED_FACTORY]) return;
+
+    const editorFactory: DecoratedEditorFactory = (tui, editorTheme, keybindings) => {
       const editor =
         previousEditorFactory?.(tui, editorTheme, keybindings) ??
         new CustomEditor(tui, editorTheme, keybindings);
       return decorateDoubleEscapeEditor(editor, tui, ctx.ui.theme, () => ctx.isIdle());
-    });
+    };
+    editorFactory[DECORATED_FACTORY] = true;
+
+    ctx.ui.setEditorComponent(editorFactory);
   });
 }
