@@ -46,6 +46,7 @@ function decorateDoubleEscapeEditor(
   tui: TUI,
   appTheme: Theme,
   isIdle: () => boolean,
+  onCleanup: (cleanup: () => void) => void,
 ): EditorComponent {
   let escapeState: DoubleEscapeState = createInitialState();
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -55,8 +56,18 @@ function decorateDoubleEscapeEditor(
     debounceTimer = undefined;
   };
 
-  const handleInput = editor.handleInput.bind(editor);
-  editor.handleInput = (data: string): void => {
+  let active = true;
+  const originalHandleInput = editor.handleInput;
+  const originalRender = editor.render;
+  const handleInput = originalHandleInput.bind(editor);
+  const wrappedInput = (data: string): void => {
+    const autocomplete = editor as EditorComponent & { isShowingAutocomplete?: () => boolean };
+    if (!active || autocomplete.isShowingAutocomplete?.()) {
+      clearDebounce();
+      escapeState = createInitialState();
+      handleInput(data);
+      return;
+    }
     if (!matchesKey(data, "escape")) {
       if (escapeState.hintActive) {
         escapeState = handleOtherKey(escapeState).state;
@@ -86,7 +97,7 @@ function decorateDoubleEscapeEditor(
 
   const render = editor.render.bind(editor);
   editor.render = (width: number): string[] => {
-    const lines = render(width);
+    const lines = [...render(width)];
     if (!escapeState.hintActive || lines.length === 0) return lines;
 
     const label = " esc again to abort ";
@@ -104,6 +115,15 @@ function decorateDoubleEscapeEditor(
     return lines;
   };
 
+  editor.handleInput = wrappedInput;
+  const wrappedRender = editor.render;
+  onCleanup(() => {
+    active = false;
+    clearDebounce();
+    escapeState = createInitialState();
+    if (editor.handleInput === wrappedInput) editor.handleInput = originalHandleInput;
+    if (editor.render === wrappedRender) editor.render = originalRender;
+  });
   return editor;
 }
 
@@ -117,7 +137,11 @@ type EditorFactory = NonNullable<ReturnType<ExtensionContext["ui"]["getEditorCom
 type DecoratedEditorFactory = EditorFactory & { [DECORATED_FACTORY]?: true };
 
 export default function (pi: ExtensionAPI) {
+  const cleanups = new Set<() => void>();
+  let installed: DecoratedEditorFactory | undefined;
+  let previous: EditorFactory | undefined;
   pi.on("session_start", (_event, ctx) => {
+    if (ctx.mode !== "tui") return;
     const previousEditorFactory = ctx.ui.getEditorComponent() as DecoratedEditorFactory | undefined;
     if (previousEditorFactory?.[DECORATED_FACTORY]) return;
 
@@ -125,10 +149,19 @@ export default function (pi: ExtensionAPI) {
       const editor =
         previousEditorFactory?.(tui, editorTheme, keybindings) ??
         new CustomEditor(tui, editorTheme, keybindings);
-      return decorateDoubleEscapeEditor(editor, tui, ctx.ui.theme, () => ctx.isIdle());
+      return decorateDoubleEscapeEditor(editor, tui, ctx.ui.theme, () => ctx.isIdle(), (cleanup) => cleanups.add(cleanup));
     };
     editorFactory[DECORATED_FACTORY] = true;
 
+    previous = previousEditorFactory;
+    installed = editorFactory;
     ctx.ui.setEditorComponent(editorFactory);
+  });
+  pi.on("session_shutdown", (_event, ctx) => {
+    for (const cleanup of cleanups) cleanup();
+    cleanups.clear();
+    if (installed && ctx.ui.getEditorComponent() === installed) ctx.ui.setEditorComponent(previous);
+    installed = undefined;
+    previous = undefined;
   });
 }

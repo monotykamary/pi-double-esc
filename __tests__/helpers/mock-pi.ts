@@ -64,6 +64,7 @@ export function makeCtx(overrides: Record<string, any> = {}): Record<string, any
   return {
     cwd: "/fake/project",
     hasUI: true,
+    mode: "tui",
     isIdle: () => false,
     ui: {
       notify: noop,

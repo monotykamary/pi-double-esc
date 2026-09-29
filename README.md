@@ -101,3 +101,9 @@ npm run lint:dead   # check for unused exports
 ## License
 
 MIT
+
+## Pi 0.99 compatibility (1.0.15)
+
+Preserves single-Escape autocomplete dismissal, restores editor methods/factories and clears debounce timers on shutdown. Non-TUI sessions are untouched; cached render output is not mutated.
+
+Tested with Pi 0.99.0. Host-provided Pi packages are wildcard peers, not bundled dependencies; development uses exact 0.99.0 versions.
