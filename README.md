@@ -102,6 +102,13 @@ npm run lint:dead   # check for unused exports
 
 MIT
 
+## Pi 1.0 compatibility (1.0.16)
+
+Tested against Pi **1.0.0** with exact SDK development pins and wildcard host peers.
+Editor composition, autocomplete Escape, timer cleanup and shutdown restoration remain intact.
+
+Run `bun run test:host` for the offline real-host regression. Set `PI1_HOST_PACKAGE` to an installed Pi package directory and `PI1_HOST_ENTRY=bundle` to test its bundled CLI runtime.
+
 ## Pi 0.99 compatibility (1.0.15)
 
 Preserves single-Escape autocomplete dismissal, restores editor methods/factories and clears debounce timers on shutdown. Non-TUI sessions are untouched; cached render output is not mutated.

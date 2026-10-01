@@ -1,6 +1,6 @@
 {
   "name": "pi-double-esc",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "Prevent accidental Escape from aborting the LLM — requires double-press to interrupt while streaming",
   "type": "module",
   "author": "Tom X Nguyen",
@@ -30,6 +30,7 @@
     "README.md"
   ],
   "scripts": {
+    "test:host": "node scripts/pi1-host.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -37,8 +38,8 @@
     "lint:dead": "knip --no-gitignore"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "0.99.0",
-    "@earendil-works/pi-tui": "0.99.0",
+    "@earendil-works/pi-coding-agent": "1.0.0",
+    "@earendil-works/pi-tui": "1.0.0",
     "@types/node": "25.9.1",
     "@vitest/coverage-v8": "4.1.7",
     "knip": "6.14.1",

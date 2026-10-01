@@ -3,7 +3,7 @@ import extension from "../../double-esc.js";
 import { createMockPi, getHandler, makeCtx } from "../helpers/mock-pi.js";
 
 afterEach(() => vi.useRealTimers());
-describe("Pi 0.99 editor lifecycle", () => {
+describe("Pi 1.0 editor lifecycle", () => {
   it("keeps autocomplete single-Escape and restores editor methods/timers on shutdown", async () => {
     vi.useFakeTimers();
     const pi = createMockPi();
