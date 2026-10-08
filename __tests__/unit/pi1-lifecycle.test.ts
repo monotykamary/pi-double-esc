@@ -3,7 +3,7 @@ import extension from "../../double-esc.js";
 import { createMockPi, getHandler, makeCtx } from "../helpers/mock-pi.js";
 
 afterEach(() => vi.useRealTimers());
-describe("Pi 1.0 editor lifecycle", () => {
+describe("Pi 1.1.0 editor lifecycle", () => {
   it("keeps autocomplete single-Escape and restores editor methods/timers on shutdown", async () => {
     vi.useFakeTimers();
     const pi = createMockPi();
@@ -37,6 +37,36 @@ describe("Pi 1.0 editor lifecycle", () => {
     editor.handleInput("\x1b");
     expect(input).toHaveBeenCalledOnce();
     await getHandler(pi, "session_shutdown")!({}, ctx);
+  });
+  it("preserves an active outer owner and skips both inactive factories on restart", async () => {
+    const pi = createMockPi();
+    const editor = { handleInput: vi.fn(), render: () => ["─".repeat(80)] };
+    const base = () => editor;
+    let factory: any = base;
+    const ctx = makeCtx({ ui: { getEditorComponent: () => factory, setEditorComponent: (f: any) => { factory = f; }, theme: { fg: (_: string, s: string) => s } } });
+    extension(pi);
+    await getHandler(pi, "session_start")!({}, ctx);
+    const installed = factory;
+    const patch = Symbol.for("pi.editor-factory.patch.v1");
+    const outer: any = (...args: any[]) => installed(...args);
+    const state = { active: true, original: installed };
+    outer[patch] = state; factory = outer;
+    await getHandler(pi, "session_start")!({}, ctx);
+    expect(factory).toBe(outer);
+    const retained = factory({ requestRender() {} }, {}, {});
+    retained.handleInput("\x1b");
+    retained.handleInput("\x1b");
+    await getHandler(pi, "session_shutdown")!({}, ctx);
+    retained.handleInput("\x1b");
+    expect(vi.mocked(editor.handleInput)).toHaveBeenCalledTimes(2);
+    await getHandler(pi, "session_shutdown")!({}, ctx);
+    expect(factory).toBe(outer);
+    expect(installed[patch].active).toBe(false);
+    state.active = false;
+    await getHandler(pi, "session_start")!({}, ctx);
+    expect(factory[patch].original).toBe(base);
+    await getHandler(pi, "session_shutdown")!({}, ctx);
+    expect(factory).toBe(base);
   });
   it.each(["rpc", "json", "sdk"])("does not decorate %s", async (mode) => {
     const pi = createMockPi(); const setEditorComponent = vi.fn();

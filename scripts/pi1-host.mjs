@@ -1,5 +1,6 @@
-// Offline native and bundled Pi 1.0 load, TUI behavior and cleanup probe.
+// Offline native and bundled Pi 1.1.0 load, TUI behavior and cleanup probe.
 import assert from 'node:assert/strict';
+import { visibleWidth } from '@earendil-works/pi-tui';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -13,8 +14,8 @@ process.env.PI_FABRIC_PARENT_RUN = '';
 const host = process.env.PI1_HOST_PACKAGE;
 const hostEntry = process.env.PI1_HOST_ENTRY === 'bundle' ? 'dist/bundle/index.js' : 'dist/index.js';
 const sdk = await import(host ? pathToFileURL(join(host, hostEntry)).href : '@earendil-works/pi-coding-agent');
-assert.equal(sdk.VERSION, '1.0.0');
-assert.equal((await import('@earendil-works/pi-coding-agent')).VERSION, '1.0.0');
+assert.equal(sdk.VERSION, '1.1.0');
+assert.equal((await import('@earendil-works/pi-coding-agent')).VERSION, '1.1.0');
 const constructors = ['AgentSession', 'InteractiveMode', 'ModelSelectorComponent', 'FooterComponent', 'CustomEditor'];
 globalThis[Symbol.for('pi1.ui.host')] = sdk;
 const identity = join(root, 'identity.ts');
@@ -37,14 +38,38 @@ try {
   for (const [i, [p, key]] of targets.entries()) assert.equal(p[key], originals[i], 'headless must not patch UI');
   sdk.initTheme('dark', false);
   let factory, customCalls = 0;
-  const ui = { ...session.extensionRunner.createContext().ui, theme: session.extensionRunner.createContext().ui.theme, notify() {}, getEditorComponent: () => factory, setEditorComponent: f => { factory = f; }, custom: async create => { customCalls++; const c = create({ requestRender() {}, terminal: { rows: 30, columns: 80 } }, session.extensionRunner.createContext().ui.theme, {}, () => {}); c.focused = true; c.invalidate(); assert(Array.isArray(c.render(80))); c.dispose?.(); return undefined; } };
+  const ui = { ...session.extensionRunner.createContext().ui, theme: session.extensionRunner.createContext().ui.theme, notify() {}, getEditorComponent: () => factory, setEditorComponent: f => { factory = f; }, custom: async create => { customCalls++; const c = create({ requestRender() {}, terminal: { rows: 30, columns: 80 } }, session.extensionRunner.createContext().ui.theme, {}, () => {}); c.focused = true; for (const width of [30, 80]) { c.invalidate(); const lines = c.render(width); assert(Array.isArray(lines)); for (const line of lines) assert(visibleWidth(line) <= width, `custom UI overflow at ${width}`); } c.dispose?.(); return undefined; } };
   session.extensionRunner.setUIContext(ui, 'tui');
   await session.extensionRunner.emit({ type: 'session_start', reason: 'reload' });
   assert.equal(typeof factory, 'function');
   assert(owned.handlers.has('session_shutdown'));
+  const { KeybindingsManager } = await import(pathToFileURL(join(sdk.getPackageDir(), 'dist/core/keybindings.js')).href);
+  const tui = { requestRender() {}, terminal: { rows: 30, columns: 80 } };
+  const editor = factory(tui, { borderColor: s => s }, new KeybindingsManager());
+  assert(editor instanceof sdk.CustomEditor, 'decorates the executing host editor');
+  const originalInput = sdk.CustomEditor.prototype.handleInput;
+  const originalRender = Object.getPrototypeOf(sdk.CustomEditor.prototype).render;
+  let interrupts = 0;
+  editor.onEscape = () => { interrupts++; };
+  editor.setText('hello world');
+  editor.handleInput('\x1b[H'); editor.handleInput('X');
+  assert.equal(editor.getText(), 'Xhello world', 'Home retains Pi 1.1 line-start semantics');
+  editor.handleInput('\x1b[F'); editor.handleInput('Y');
+  assert.equal(editor.getText(), 'Xhello worldY', 'End retains Pi 1.1 line-end semantics');
+  session._isAgentRunActive = true;
+  editor.handleInput('\x1b');
+  assert.equal(interrupts, 0);
+  assert(editor.render(80).some(line => line.includes('esc again to abort')));
+  editor.handleInput('\x1b');
+  assert.equal(interrupts, 1);
+  session._isAgentRunActive = false;
+  editor.handleInput('\x1b');
+  assert.equal(interrupts, 2, 'idle Escape passes through immediately');
   await session.extensionRunner.emit({ type: 'session_shutdown', reason: 'quit' });
   assert.deepEqual(errors, []);
   for (const [i, [p, key]] of targets.entries()) assert.equal(p[key], originals[i], 'shutdown restores ' + key);
   assert.equal(factory, undefined);
+  assert.equal(editor.handleInput, originalInput);
+  assert.equal(editor.render, originalRender);
   console.log(JSON.stringify({ repo: manifest.name, pi: sdk.VERSION, hostEntry, registrations: { handlers: owned.handlers.size, commands: owned.commands.size }, behavior: 'passed', cleanup: 'passed' }));
 } finally { session?.dispose(); delete globalThis[Symbol.for('pi1.ui.host')]; rmSync(root, { recursive: true, force: true }); }

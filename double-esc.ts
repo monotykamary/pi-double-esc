@@ -134,24 +134,53 @@ function decorateDoubleEscapeEditor(
 const DECORATED_FACTORY = Symbol("pi-double-esc.decoratedFactory");
 
 type EditorFactory = NonNullable<ReturnType<ExtensionContext["ui"]["getEditorComponent"]>>;
-type DecoratedEditorFactory = EditorFactory & { [DECORATED_FACTORY]?: true };
+// Shared with cooperating editor decorators: inactive factories are skipped
+// when an outer owner later unwinds, regardless of shutdown order.
+const EDITOR_FACTORY_PATCH = Symbol.for("pi.editor-factory.patch.v1");
+type DecoratedEditorFactory = EditorFactory & {
+  [DECORATED_FACTORY]?: true;
+  [EDITOR_FACTORY_PATCH]?: { active: boolean; original?: EditorFactory };
+};
+function unwrapEditorFactory(factory: EditorFactory | undefined): EditorFactory | undefined {
+  while (factory) {
+    const state = (factory as DecoratedEditorFactory)[EDITOR_FACTORY_PATCH];
+    if (!state || state.active) return factory;
+    factory = state.original;
+  }
+  return undefined;
+}
+
+function hasDoubleEscape(factory: EditorFactory | undefined): boolean {
+  while (factory) {
+    const wrapped = factory as DecoratedEditorFactory;
+    const state = wrapped[EDITOR_FACTORY_PATCH];
+    if (state?.active !== false && wrapped[DECORATED_FACTORY]) return true;
+    factory = state?.original;
+  }
+  return false;
+}
 
 export default function (pi: ExtensionAPI) {
   const cleanups = new Set<() => void>();
   let installed: DecoratedEditorFactory | undefined;
   let previous: EditorFactory | undefined;
+  const factoryStates: { active: boolean; original?: EditorFactory }[] = [];
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
-    const previousEditorFactory = ctx.ui.getEditorComponent() as DecoratedEditorFactory | undefined;
-    if (previousEditorFactory?.[DECORATED_FACTORY]) return;
+    const previousEditorFactory = unwrapEditorFactory(ctx.ui.getEditorComponent()) as DecoratedEditorFactory | undefined;
+    if (hasDoubleEscape(previousEditorFactory)) return;
 
+    const state = { active: true, original: previousEditorFactory };
     const editorFactory: DecoratedEditorFactory = (tui, editorTheme, keybindings) => {
       const editor =
-        previousEditorFactory?.(tui, editorTheme, keybindings) ??
+        unwrapEditorFactory(previousEditorFactory)?.(tui, editorTheme, keybindings) ??
         new CustomEditor(tui, editorTheme, keybindings);
+      if (!state.active) return editor;
       return decorateDoubleEscapeEditor(editor, tui, ctx.ui.theme, () => ctx.isIdle(), (cleanup) => cleanups.add(cleanup));
     };
     editorFactory[DECORATED_FACTORY] = true;
+    editorFactory[EDITOR_FACTORY_PATCH] = state;
+    factoryStates.push(state);
 
     previous = previousEditorFactory;
     installed = editorFactory;
@@ -160,7 +189,9 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_shutdown", (_event, ctx) => {
     for (const cleanup of cleanups) cleanup();
     cleanups.clear();
-    if (installed && ctx.ui.getEditorComponent() === installed) ctx.ui.setEditorComponent(previous);
+    for (const state of factoryStates) state.active = false;
+    factoryStates.length = 0;
+    if (installed && ctx.ui.getEditorComponent() === installed) ctx.ui.setEditorComponent(unwrapEditorFactory(previous));
     installed = undefined;
     previous = undefined;
   });
