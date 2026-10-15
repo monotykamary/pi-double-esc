@@ -1,4 +1,4 @@
-// Offline native and bundled Pi 1.1.0 load, TUI behavior and cleanup probe.
+// Offline native and bundled Pi 1.2.0 load, TUI behavior and cleanup probe.
 import assert from 'node:assert/strict';
 import { visibleWidth } from '@earendil-works/pi-tui';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
@@ -14,8 +14,8 @@ process.env.PI_FABRIC_PARENT_RUN = '';
 const host = process.env.PI1_HOST_PACKAGE;
 const hostEntry = process.env.PI1_HOST_ENTRY === 'bundle' ? 'dist/bundle/index.js' : 'dist/index.js';
 const sdk = await import(host ? pathToFileURL(join(host, hostEntry)).href : '@earendil-works/pi-coding-agent');
-assert.equal(sdk.VERSION, '1.1.0');
-assert.equal((await import('@earendil-works/pi-coding-agent')).VERSION, '1.1.0');
+assert.equal(sdk.VERSION, '1.2.0');
+assert.equal((await import('@earendil-works/pi-coding-agent')).VERSION, '1.2.0');
 const constructors = ['AgentSession', 'InteractiveMode', 'ModelSelectorComponent', 'FooterComponent', 'CustomEditor'];
 globalThis[Symbol.for('pi1.ui.host')] = sdk;
 const identity = join(root, 'identity.ts');
@@ -53,9 +53,9 @@ try {
   editor.onEscape = () => { interrupts++; };
   editor.setText('hello world');
   editor.handleInput('\x1b[H'); editor.handleInput('X');
-  assert.equal(editor.getText(), 'Xhello world', 'Home retains Pi 1.1 line-start semantics');
+  assert.equal(editor.getText(), 'Xhello world', 'Home retains Pi 1.2 line-start semantics');
   editor.handleInput('\x1b[F'); editor.handleInput('Y');
-  assert.equal(editor.getText(), 'Xhello worldY', 'End retains Pi 1.1 line-end semantics');
+  assert.equal(editor.getText(), 'Xhello worldY', 'End retains Pi 1.2 line-end semantics');
   session._isAgentRunActive = true;
   editor.handleInput('\x1b');
   assert.equal(interrupts, 0);
