@@ -104,7 +104,7 @@ MIT
 
 ## Pi 1.0 compatibility (1.0.16)
 
-Tested against Pi **1.2.0** with exact SDK development pins and wildcard host peers.
+Tested against Pi **1.3.0** with exact SDK development pins and wildcard host peers.
 Editor composition, autocomplete Escape, timer cleanup and shutdown restoration remain intact.
 
 Run `bun run test:host` for the offline real-host regression. Set `PI1_HOST_PACKAGE` to an installed Pi package directory and `PI1_HOST_ENTRY=bundle` to test its bundled CLI runtime.
